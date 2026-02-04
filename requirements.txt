@@ -13,3 +13,6 @@ pydantic-settings==2.1.0
 
 # Environment variables
 python-dotenv==1.0.0
+
+# Caching
+redis==5.0.1

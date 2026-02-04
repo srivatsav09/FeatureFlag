@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Flag, Environment
 from app.schemas import FlagCreate, FlagUpdate, FlagResponse
+from app.cache import CacheService
 
 router = APIRouter(
     prefix="/flags",
@@ -176,6 +177,10 @@ def update_flag(
     db.commit()
     db.refresh(flag)
 
+    # Invalidate cache so next evaluation gets fresh data
+    cache = CacheService()
+    cache.invalidate_flag(flag_key, environment_key)
+
     return flag
 
 
@@ -215,5 +220,9 @@ def delete_flag(
 
     db.delete(flag)
     db.commit()
+
+    # Invalidate cache
+    cache = CacheService()
+    cache.invalidate_flag(flag_key, environment_key)
 
     return None

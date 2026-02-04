@@ -13,5 +13,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data  # Persist data between restarts
 
+  redis:
+    image: redis:7-alpine
+    container_name: featureflag_redis
+    ports:
+      - "6379:6379"  # Redis default port
+
 volumes:
   postgres_data:

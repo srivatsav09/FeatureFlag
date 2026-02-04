@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "postgresql://postgres:postgres@localhost:5432/featureflag"
 
+    # Redis
+    redis_url: str = "redis://localhost:6379/0"
+    cache_ttl_seconds: int = 60  # How long to cache flag configs
+
     # Application
     app_env: str = "development"
     debug: bool = True
