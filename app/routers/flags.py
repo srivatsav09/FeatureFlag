@@ -2,9 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Flag, Environment
+from app.models import Flag, Environment, User
 from app.schemas import FlagCreate, FlagUpdate, FlagResponse
 from app.cache import CacheService
+from app.auth import require_admin, require_developer_or_admin, require_any_role
 
 router = APIRouter(
     prefix="/flags",
@@ -13,7 +14,11 @@ router = APIRouter(
 
 
 @router.post("/", response_model=FlagResponse, status_code=status.HTTP_201_CREATED)
-def create_flag(flag_data: FlagCreate, db: Session = Depends(get_db)):
+def create_flag(
+    flag_data: FlagCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_developer_or_admin),  # Auth required
+):
     """
     Create a new feature flag.
 
@@ -68,7 +73,8 @@ def create_flag(flag_data: FlagCreate, db: Session = Depends(get_db)):
 @router.get("/", response_model=list[FlagResponse])
 def list_flags(
     environment_key: str | None = Query(default=None, description="Filter by environment key"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role),  # Any logged-in user can read
 ):
     """
     List all flags, optionally filtered by environment.
@@ -100,7 +106,8 @@ def list_flags(
 def get_flag(
     flag_key: str,
     environment_key: str = Query(..., description="Environment key (required)"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role),  # Any logged-in user can read
 ):
     """
     Get a specific flag by key and environment.
@@ -138,7 +145,8 @@ def update_flag(
     flag_key: str,
     flag_data: FlagUpdate,
     environment_key: str = Query(..., description="Environment key (required)"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_developer_or_admin),  # Dev or admin can update
 ):
     """
     Update a flag's configuration.
@@ -188,7 +196,8 @@ def update_flag(
 def delete_flag(
     flag_key: str,
     environment_key: str = Query(..., description="Environment key (required)"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),  # Only admin can delete
 ):
     """
     Delete a flag.

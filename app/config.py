@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     cache_ttl_seconds: int = 60  # How long to cache flag configs
 
+    # JWT Authentication
+    jwt_secret_key: str = "your-super-secret-key-change-in-production"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 60
+
     # Application
     app_env: str = "development"
     debug: bool = True
