@@ -2,7 +2,7 @@ from fastapi import FastAPI
 
 from app.database import engine, Base
 from app.models import Flag, Environment  # Import models so they're registered
-from app.routers import environments_router, flags_router
+from app.routers import environments_router, flags_router, evaluate_router
 
 # Create the FastAPI application instance
 # This is the core object that handles all HTTP requests
@@ -15,6 +15,7 @@ app = FastAPI(
 # Register routers
 app.include_router(environments_router)
 app.include_router(flags_router)
+app.include_router(evaluate_router)
 
 
 # A simple health check endpoint

@@ -46,6 +46,7 @@ class FlagUpdate(BaseModel):
 
     name: str | None = Field(default=None, max_length=200)
     description: str | None = Field(default=None, max_length=1000)
+    flag_type: FlagType | None = Field(default=None)
     is_enabled: bool | None = Field(default=None)
     rollout_percentage: int | None = Field(default=None, ge=0, le=100)
 
