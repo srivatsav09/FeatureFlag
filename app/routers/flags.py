@@ -6,6 +6,7 @@ from app.models import Flag, Environment, User
 from app.schemas import FlagCreate, FlagUpdate, FlagResponse
 from app.cache import CacheService
 from app.auth import require_admin, require_developer_or_admin, require_any_role
+from app.services.audit import AuditService
 
 router = APIRouter(
     prefix="/flags",
@@ -66,6 +67,16 @@ def create_flag(
     db.add(flag)
     db.commit()
     db.refresh(flag)
+
+    # Audit log
+    audit = AuditService(db)
+    audit.log_create(
+        entity_type="flag",
+        entity_id=flag.id,
+        entity_key=flag.key,
+        user=current_user,
+        environment_key=environment.key,
+    )
 
     return flag
 
@@ -177,6 +188,15 @@ def update_flag(
             detail=f"Flag '{flag_key}' not found in environment '{environment_key}'"
         )
 
+    # Capture old values for audit log
+    old_values = {
+        "name": flag.name,
+        "description": flag.description,
+        "flag_type": flag.flag_type.value if flag.flag_type else None,
+        "is_enabled": flag.is_enabled,
+        "rollout_percentage": flag.rollout_percentage,
+    }
+
     # Update only provided fields
     update_data = flag_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -184,6 +204,27 @@ def update_flag(
 
     db.commit()
     db.refresh(flag)
+
+    # Capture new values for audit log
+    new_values = {
+        "name": flag.name,
+        "description": flag.description,
+        "flag_type": flag.flag_type.value if flag.flag_type else None,
+        "is_enabled": flag.is_enabled,
+        "rollout_percentage": flag.rollout_percentage,
+    }
+
+    # Audit log
+    audit = AuditService(db)
+    audit.log_update(
+        entity_type="flag",
+        entity_id=flag.id,
+        entity_key=flag.key,
+        user=current_user,
+        old_values=old_values,
+        new_values=new_values,
+        environment_key=environment_key,
+    )
 
     # Invalidate cache so next evaluation gets fresh data
     cache = CacheService()
@@ -227,8 +268,21 @@ def delete_flag(
             detail=f"Flag '{flag_key}' not found in environment '{environment_key}'"
         )
 
+    # Store flag info for audit before deleting
+    flag_id = flag.id
+
     db.delete(flag)
     db.commit()
+
+    # Audit log (after delete succeeds)
+    audit = AuditService(db)
+    audit.log_delete(
+        entity_type="flag",
+        entity_id=flag_id,
+        entity_key=flag_key,
+        user=current_user,
+        environment_key=environment_key,
+    )
 
     # Invalidate cache
     cache = CacheService()

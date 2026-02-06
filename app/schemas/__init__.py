@@ -13,3 +13,4 @@ from app.schemas.user import (
     UserResponse,
     TokenResponse,
 )
+from app.schemas.audit import AuditLogResponse
