@@ -3,15 +3,31 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Flag, Environment, User
+from app.models.user import UserRole
 from app.schemas import FlagCreate, FlagUpdate, FlagResponse
 from app.cache import CacheService
 from app.auth import require_admin, require_developer_or_admin, require_any_role
 from app.services.audit import AuditService
 
+# Environments that only admins can modify
+PROTECTED_ENVIRONMENTS = {"production"}
+
 router = APIRouter(
     prefix="/flags",
     tags=["Flags"],
 )
+
+
+def check_environment_permission(environment_key: str, user: User):
+    """
+    Check if user has permission to modify flags in this environment.
+    Developers cannot modify production flags - only admins can.
+    """
+    if environment_key in PROTECTED_ENVIRONMENTS and user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Only admins can modify flags in '{environment_key}' environment",
+        )
 
 
 @router.post("/", response_model=FlagResponse, status_code=status.HTTP_201_CREATED)
@@ -40,6 +56,9 @@ def create_flag(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Environment with id '{flag_data.environment_id}' not found"
         )
+
+    # Check if developer is trying to modify production
+    check_environment_permission(environment.key, current_user)
 
     # Check if flag with this key already exists in this environment
     existing = db.query(Flag).filter(
@@ -176,6 +195,9 @@ def update_flag(
             detail=f"Environment '{environment_key}' not found"
         )
 
+    # Check if developer is trying to modify production
+    check_environment_permission(environment_key, current_user)
+
     # Find flag
     flag = db.query(Flag).filter(
         Flag.key == flag_key,
@@ -255,6 +277,9 @@ def delete_flag(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Environment '{environment_key}' not found"
         )
+
+    # Check environment permission
+    check_environment_permission(environment_key, current_user)
 
     # Find flag
     flag = db.query(Flag).filter(
