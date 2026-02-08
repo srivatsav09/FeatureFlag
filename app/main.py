@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from app.database import engine, Base, SessionLocal
 from app.models import Flag, Environment, User, AuditLog  # Import models so they're registered
@@ -18,6 +20,16 @@ app.include_router(environments_router)
 app.include_router(flags_router)
 app.include_router(evaluate_router)
 app.include_router(audit_router)
+
+# Serve static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+# Dashboard - serve the HTML page
+@app.get("/")
+def serve_dashboard():
+    """Serve the dashboard UI."""
+    return FileResponse("static/dashboard.html")
 
 
 # A simple health check endpoint
